@@ -1,5 +1,9 @@
 # CodeSprint
 
+🚀 **Live Demo:** https://your-vercel-url.vercel.app
+
+# CodeSprint
+
 A JavaScript learning platform — theory lesson, then drills. Pick a section, drill down into a topic, work through a short interactive lesson (runnable code examples + MCQs), then solve real coding challenges against a sandboxed test runner. Sign up with email + OTP verification to keep progress tied to your account.
 
 Built with React, React Router, and Tailwind CSS.
