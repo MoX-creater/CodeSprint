@@ -23,11 +23,11 @@ export default function Sidebar({ open, onClose }) {
           <NavLink to="/" className="flex items-center gap-2 group" onClick={onClose}>
             <span className="w-2.5 h-2.5 rounded-sm bg-accent group-hover:bg-good transition-colors" />
             <span className="font-mono text-[15px] font-semibold tracking-tight text-text">
-              codesprint
+              CodeSprint
             </span>
           </NavLink>
           <p className="mt-2 text-xs text-muted leading-relaxed">
-            JavaScript drills, organized like a real course.
+            Think. Code. Test. Improve.
           </p>
         </div>
 
