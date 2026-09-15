@@ -1,6 +1,4 @@
-# CodeSprint
-
-🚀 **Live Demo:** https://your-vercel-url.vercel.app
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-CodeSprint-blue?style=for-the-badge)](https://YOUR-VERCEL-URL.vercel.app)
 
 # CodeSprint
 
