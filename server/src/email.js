@@ -1,59 +1,50 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-let client = null;
-function getClient() {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error(
-      "RESEND_API_KEY is not set. Copy server/.env.example to server/.env and fill it in — see README.md."
-    );
-  }
-  if (!client) client = new Resend(process.env.RESEND_API_KEY);
-  return client;
-}
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
-export async function sendOtpEmail(toEmail, code) {
-  const from = process.env.EMAIL_FROM || "CodeSprint <onboarding@resend.dev>";
+export async function sendOtpEmail(to, otp) {
+  await transporter.sendMail({
+    from: `"CodeSprint" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: "Your CodeSprint verification code",
 
-  const text = `CodeSprint - Email Verification
+    text: `Your CodeSprint verification code is ${otp}.
 
-Your verification code is: ${code}
+This code will expire in 10 minutes.
 
-This code will expire in 5 minutes.
+If you did not create a CodeSprint account, you can ignore this email.`,
 
-If you did not create a CodeSprint account, please ignore this email.`;
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto;">
+        <h2>CodeSprint</h2>
 
-  const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #12151C;">
-      <p style="font-family: 'Courier New', monospace; font-weight: 700; font-size: 15px; letter-spacing: -0.01em; margin: 0 0 24px;">
-        <span style="display:inline-block;width:10px;height:10px;background:#5B8DEF;border-radius:2px;margin-right:8px;"></span>drillbyte
-      </p>
-      <h1 style="font-size: 18px; margin: 0 0 8px;">Verify your email</h1>
-      <p style="font-size: 14px; color: #444; line-height: 1.6; margin: 0 0 20px;">
-        Your verification code is:
-      </p>
-      <p style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; letter-spacing: 0.2em; margin: 0 0 20px;">
-        ${code}
-      </p>
-      <p style="font-size: 13px; color: #666; line-height: 1.6; margin: 0 0 4px;">
-        This code will expire in 5 minutes.
-      </p>
-      <p style="font-size: 13px; color: #888; line-height: 1.6; margin: 24px 0 0;">
-        If you did not create a CodeSprint account, please ignore this email.
-      </p>
-    </div>
-  `;
+        <p>Your verification code is:</p>
 
-  const resend = getClient();
-  const { data, error } = await resend.emails.send({
-    from,
-    to: toEmail,
-    subject: "CodeSprint - Email Verification",
-    text,
-    html,
+        <div style="
+          font-size: 32px;
+          font-weight: bold;
+          letter-spacing: 8px;
+          padding: 20px;
+          background: #f3f4f6;
+          text-align: center;
+          border-radius: 8px;
+        ">
+          ${otp}
+        </div>
+
+        <p>This code will expire in 10 minutes.</p>
+
+        <p style="color: #666;">
+          If you did not create a CodeSprint account,
+          you can safely ignore this email.
+        </p>
+      </div>
+    `,
   });
-
-  if (error) {
-    throw new Error(`Resend failed to send the email: ${error.message || JSON.stringify(error)}`);
-  }
-  return data;
 }
