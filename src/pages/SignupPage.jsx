@@ -27,7 +27,7 @@ export default function SignupPage() {
       setError(res.error);
       return;
     }
-    navigate(`/verify?email=${encodeURIComponent(email.trim().toLowerCase())}`, {
+    navigate("/login", {
       state: { from },
     });
   }
@@ -43,7 +43,7 @@ export default function SignupPage() {
         <div className="border border-line rounded-lg bg-surface p-6">
           <h1 className="text-lg font-semibold text-text mb-1">Create your account</h1>
           <p className="text-[13px] text-muted mb-6">
-            We'll email you a 6-digit code to verify it's really you.
+            Create your account to start practicing JavaScript.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
