@@ -7,6 +7,23 @@ import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { vim } from "@replit/codemirror-vim";
+import { EditorView } from "@codemirror/view";
+import { Compartment } from "@codemirror/state";
+
+const fontCompartment = new Compartment();
+
+const buildFontTheme = (fontFamily, fontSize, fontLigatures) =>
+  EditorView.theme({
+    "&": {
+      fontSize: `${fontSize}px !important`,
+    },
+    ".cm-content, .cm-gutters": {
+      fontFamily: `"${fontFamily}", ui-monospace, SFMono-Regular, monospace !important`,
+      fontSize: `${fontSize}px !important`,
+      fontFeatureSettings: fontLigatures ? '"calt" 1, "liga" 1' : 'normal',
+      fontVariantLigatures: fontLigatures ? 'normal' : 'none',
+    },
+  });
 
 const difficultyColor = {
   Easy: "text-good",
@@ -30,15 +47,41 @@ export default function ChallengePage() {
   const [vimMode, setVimMode] = useState(() => {
     return localStorage.getItem("codesprint-vim-mode") === "true";
   });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [fontSize, setFontSize] = useState(() => {
+    return parseInt(localStorage.getItem("codesprint-font-size") || "14", 10);
+  });
+  const [fontFamily, setFontFamily] = useState(() => {
+    return localStorage.getItem("codesprint-font-family") || "JetBrains Mono";
+  });
+  const [fontLigatures, setFontLigatures] = useState(() => {
+    return localStorage.getItem("codesprint-font-ligatures") === "true";
+  });
 
   useEffect(() => {
     localStorage.setItem("codesprint-vim-mode", vimMode.toString());
   }, [vimMode]);
 
   useEffect(() => {
+    localStorage.setItem("codesprint-font-size", fontSize.toString());
+    localStorage.setItem("codesprint-font-family", fontFamily);
+    localStorage.setItem("codesprint-font-ligatures", fontLigatures.toString());
+  }, [fontSize, fontFamily, fontLigatures]);
+
+  useEffect(() => {
     setCode(challenge?.starter ?? "");
     setResult(null);
   }, [challenge?.id]);
+
+  const viewRef = useRef(null);
+
+  useEffect(() => {
+    if (viewRef.current) {
+      viewRef.current.dispatch({
+        effects: fontCompartment.reconfigure(buildFontTheme(fontFamily, fontSize, fontLigatures)),
+      });
+    }
+  }, [fontFamily, fontSize, fontLigatures]);
 
   // Auto-scroll terminal to bottom when results change
   useEffect(() => {
@@ -201,9 +244,62 @@ export default function ChallengePage() {
         {/* ── Editor Section (~60%) ── */}
         <div className="flex flex-col min-h-0" style={{ flex: "3 1 0%" }}>
           {/* Editor header */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-line bg-surface2 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-line bg-surface2 flex-shrink-0 relative">
             <span className="text-2xs font-mono text-faint">{challenge.id}.js</span>
             <div className="flex items-center gap-3">
+              <div className="relative">
+                <button
+                  onClick={() => setSettingsOpen(!settingsOpen)}
+                  className={`text-sm transition-colors ${settingsOpen ? "text-text" : "text-faint hover:text-muted"}`}
+                  title="Editor Settings"
+                >
+                  ⚙
+                </button>
+                {settingsOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setSettingsOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-surface2 border border-line rounded-lg shadow-xl z-50 p-4 font-sans text-[13px] flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-text font-medium">Font</span>
+                        <select
+                          value={fontFamily}
+                          onChange={(e) => setFontFamily(e.target.value)}
+                          className="bg-surface border border-line rounded px-2 py-1 text-text outline-none focus:border-faint text-xs font-mono w-40"
+                        >
+                          <option value="JetBrains Mono">JetBrains Mono</option>
+                          <option value="Fira Code">Fira Code</option>
+                          <option value="Ubuntu Mono">Ubuntu Mono</option>
+                          <option value="Source Code Pro">Source Code Pro</option>
+                          <option value="monospace">Default</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-text font-medium">Font size</span>
+                        <select
+                          value={fontSize}
+                          onChange={(e) => setFontSize(parseInt(e.target.value, 10))}
+                          className="bg-surface border border-line rounded px-2 py-1 text-text outline-none focus:border-faint text-xs w-40"
+                        >
+                          <option value="12">12px</option>
+                          <option value="14">14px</option>
+                          <option value="16">16px</option>
+                          <option value="18">18px</option>
+                          <option value="20">20px</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-text font-medium">Font ligatures</span>
+                        <button
+                          onClick={() => setFontLigatures(!fontLigatures)}
+                          className={`w-8 h-4 rounded-full relative transition-colors ${fontLigatures ? "bg-accent" : "bg-surface3"}`}
+                        >
+                          <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${fontLigatures ? "translate-x-4" : ""}`} />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
               <button
                 onClick={() => setVimMode(!vimMode)}
                 className={`text-2xs font-mono transition-colors ${vimMode ? "text-accent" : "text-faint hover:text-muted"}`}
@@ -223,12 +319,16 @@ export default function ChallengePage() {
           <div className="flex-1 min-h-0 overflow-hidden cm-editor-wrapper">
             <CodeMirror
               value={code}
-              height="100%"
+              height="auto"
               theme={oneDark}
               extensions={[
                 ...(vimMode ? [vim({ status: true })] : []),
+                fontCompartment.of(buildFontTheme(fontFamily, fontSize, fontLigatures)),
                 javascript()
               ]}
+              onCreateEditor={(view) => {
+                viewRef.current = view;
+              }}
               basicSetup={{
                 autocompletion: false,
                 closeBrackets: true,
