@@ -6,6 +6,7 @@ import { useProgress } from "../hooks/useProgress";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { vim } from "@replit/codemirror-vim";
 
 const difficultyColor = {
   Easy: "text-good",
@@ -26,6 +27,13 @@ export default function ChallengePage() {
   const [result, setResult] = useState(null);
   const [running, setRunning] = useState(false);
   const terminalRef = useRef(null);
+  const [vimMode, setVimMode] = useState(() => {
+    return localStorage.getItem("codesprint-vim-mode") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("codesprint-vim-mode", vimMode.toString());
+  }, [vimMode]);
 
   useEffect(() => {
     setCode(challenge?.starter ?? "");
@@ -52,7 +60,11 @@ export default function ChallengePage() {
 
   if (!section || !sub || !challenge) return <Navigate to="/" replace />;
 
+  const runningRef = useRef(running);
+  runningRef.current = running;
+
   async function handleRun() {
+    if (runningRef.current) return;
     setRunning(true);
     try {
       const res = await runChallenge(code, challenge);
@@ -62,6 +74,20 @@ export default function ChallengePage() {
       setRunning(false);
     }
   }
+
+  const handleRunRef = useRef(handleRun);
+  handleRunRef.current = handleRun;
+
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        handleRunRef.current();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const onCodeChange = useCallback((value) => {
     setCode(value);
@@ -177,12 +203,20 @@ export default function ChallengePage() {
           {/* Editor header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-line bg-surface2 flex-shrink-0">
             <span className="text-2xs font-mono text-faint">{challenge.id}.js</span>
-            <button
-              onClick={() => setCode(challenge.starter)}
-              className="text-2xs font-mono text-faint hover:text-muted transition-colors"
-            >
-              reset
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setVimMode(!vimMode)}
+                className={`text-2xs font-mono transition-colors ${vimMode ? "text-accent" : "text-faint hover:text-muted"}`}
+              >
+                vim
+              </button>
+              <button
+                onClick={() => setCode(challenge.starter)}
+                className="text-2xs font-mono text-faint hover:text-muted transition-colors"
+              >
+                reset
+              </button>
+            </div>
           </div>
 
           {/* Code editor */}
@@ -191,7 +225,10 @@ export default function ChallengePage() {
               value={code}
               height="100%"
               theme={oneDark}
-              extensions={[javascript()]}
+              extensions={[
+                ...(vimMode ? [vim({ status: true })] : []),
+                javascript()
+              ]}
               basicSetup={{
                 autocompletion: false,
                 closeBrackets: true,
@@ -211,9 +248,10 @@ export default function ChallengePage() {
             <button
               onClick={handleRun}
               disabled={running}
-              className="px-4 py-1.5 rounded-md bg-accent hover:bg-accentDim text-white text-sm font-medium transition-colors disabled:opacity-60"
+              className="px-4 py-1.5 rounded-md bg-accent hover:bg-accentDim text-white text-sm font-medium transition-colors disabled:opacity-60 flex items-center gap-2"
             >
               {running ? "Running…" : "Run tests"}
+              {!running && <span className="text-[10px] text-white/60 font-mono tracking-tighter">⌘↵</span>}
             </button>
             {result && (
               <span className={`text-2xs font-mono ${result.passed ? "text-good" : "text-bad"}`}>
